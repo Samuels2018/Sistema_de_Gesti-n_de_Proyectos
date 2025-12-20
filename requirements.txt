@@ -1,0 +1,5 @@
+PySide6>=6.5.0
+matplotlib>=3.7.1
+pandas>=2.0.1
+python-dateutil>=2.8.2
+sqlalchemy>=2.0.15
