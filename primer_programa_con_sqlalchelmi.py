@@ -30,6 +30,7 @@ class Tarea(Base):
     fecha_inicio = Column(Date)
     fecha_fin = Column(Date)
     proyecto = relationship("Proyecto",back_populates="tareas")
+    asignaciones = relationship("Asignacion", back_populates="tareas")
 
 # Almacena los datos de los usuarios y sus horas disponibles para realizar las tareas    
 
@@ -40,6 +41,7 @@ class Usuario(Base):
     email  = Column(String(255))
     rol = Column(String(20))
     horas_disponibles = Column(Float)
+    asignaciones = relationship("Asignacion", back_populates="usuario")
 
 """ Tabla intermedia utilizada para la union de dos tablas principales(tareas y usuarios),
 donde se les asignara tareas y horas para realizarlos """
@@ -62,7 +64,6 @@ class TimeTracking(Base):
     usuario_id = Column(Integer,ForeignKey('usuarios.id'),primary_key = True)  
     fecha  = Column(Date)
     horas  = Column(Float)
-    tareas = relationship("Tarea", back_populates="proyecto")
     tarea = relationship("Tarea", back_populates="asignaciones")
     usuario = relationship("Usuario", back_populates="asignaciones")
     

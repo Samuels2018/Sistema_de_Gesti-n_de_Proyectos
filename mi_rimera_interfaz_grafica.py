@@ -1,94 +1,71 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import date 
-from primer_programa_con_sqlalchelmi import Base,Proyecto,Tarea,Usuario,Asignacion,TimeTracking
+from primer_programa_con_sqlalchelmi import Base
 
-# Motor del programa 
 class DatabaseHandler:
+    _instance = None
 
-# Configura la conexion a la base de datos SQLITE y prepara la fabrica de sesiones para las transacciones
-    def __init__(self):
-        self.engine = create_engine('sqlite:///gestion_proyecto.db')
-        self.Session = sessionmaker(bind = self.engine)
-        session=self.Session()
-# Crea fisicamente todas las tablas definidas en los modelos dentro del archivo.db si aun no existen
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DatabaseHandler, cls).__new__(cls)
+            cls._instance.engine = create_engine('sqlite:///gestion_proyecto.db')
+            cls._instance.Session = sessionmaker(bind=cls._instance.engine)
+        return cls._instance
 
     def inicializar_db(self):
         Base.metadata.create_all(self.engine)
 
+    # --- MÉTODOS DE LECTURA ---
 
-    def insertar(self,objeto):
+    def consultar(self, modelo, filtro=None):
+        """
+        Obtiene registros de la base de datos.
+        :para modelo: La clase de la tabla (ej. Usuario, Proyecto)
+        :para filtro: Un diccionario opcional para filtrar (ej. {"nombre": "Juan"})
+        :return: Lista de objetos encontrados
+        """
         session = self.Session()
-
         try:
-            session.add(objeto)
-            session.commit()
-            print(f"Registro{type(objeto).__name__} insertado correctamente: ")               
-
+            query = session.query(modelo)
+            
+            if filtro:
+                # Aplicar filtros dinámicamente basados en el diccionario
+                for columna, valor in filtro.items():
+                    query = query.filter(getattr(modelo, columna) == valor)
+            
+            resultados = query.all()
+            return resultados
         except Exception as e:
-                    session.rollback()
-                    print(f"Error al insertar: {e}")
-                 
-        finally:
-                session.close()
-        
- # Toma un registro exixtente que ha sido modificado y sincroniza los cambios con la base de datos   
-
-    def actualizar(self,objeto):
-        session = self.Session()
-
-        try:
-             session.add(objeto)
-             session.commit()
-             print(f"Registro{type(objeto).__name__} actualizado correctamente: ")
-
-        except Exception as e:
-               session.rollback()
-               print(f"Error al actualizar: {e}")
-
+            print(f"Error al consultar {modelo.__name__}: {e}")
+            return []
         finally:
             session.close()
 
-# Borra de forma segura un registroespecifico de la tabla correspondiente
+    # --- MÉTODOS DE ESCRITURA (DRY) ---
 
-    def eliminar(self,objeto): 
-            session = self.Session()
-
-            try:
+    def _ejecutar_accion(self, objeto, accion):
+        session = self.Session()
+        try:
+            if accion == "guardar":
+                session.merge(objeto)
+            elif accion == "eliminar":
+                objeto = session.merge(objeto)
                 session.delete(objeto)
-                session.commit()
-                print(f"Registro{type(objeto).__name__} eliminado correctamente: ")
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            print(f"Error en {accion}: {e}")
+        finally:
+            session.close()
 
+    def insertar(self, objeto):
+        self._ejecutar_accion(objeto, "guardar")
 
-            except Exception as e:
+    def actualizar(self, objeto):
+        self._ejecutar_accion(objeto, "guardar")
 
-                session.rollback()
-                print(f"Error al eliminar: {e}")
-
-
-            finally:
-
-                 session.close()
-
-    
-
-
-    def leer(self,clase_modelo): 
-            session = self.Session()
-
-            try:
-                registros = session.query(clase_modelo).all()
-                return registros
-
-            except Exception as e:
-
-                session.rollback()
-                print(f"Error al leer: {e}")
-                return []
-
-            finally:
-
-                 session.close()
+    def eliminar(self, objeto):
+        self._ejecutar_accion(objeto, "eliminar")
 
     
 
